@@ -42,12 +42,14 @@ HELP_TEXT = """
   [cyan]jobs[/cyan]      Show scan history
   [cyan]logs[/cyan]      View logs (by job ID or codebase name)
 
+[bold]ANALYSIS[/bold]
+  [cyan]deps[/cyan]      Show dependency graph and import stats
+  [cyan]cycles[/cyan]    Detect circular dependencies
+
 [bold]EXAMPLES[/bold]
-  mapper serve -b                    # Start in background
-  mapper scan ~/code --once         # One-time scan
-  mapper scan ~/code --every 1h     # Scheduled scan
-  mapper run myproject              # Run registered scan
-  mapper logs myproject             # View latest logs
+  mapper deps ~/code                 # Analyze imports
+  mapper cycles ~/code               # Find circular deps
+  mapper deps ~/code --mermaid       # Output mermaid diagram
 """
 
 
@@ -309,6 +311,70 @@ def status() -> None:
     console.print("[red]●[/red] Daemon not running")
 
 
+@app.command(help="Analyze dependencies and show import stats")
+def deps(
+    path: Annotated[Path, typer.Argument(help="Path to codebase")] = Path("."),
+    mermaid: Annotated[bool, typer.Option("--mermaid", "-m", help="Output mermaid diagram")] = False,
+) -> None:
+    from codemapper.processor.graph import ProjectAnalyzer
+
+    resolved = path.resolve()
+    if not resolved.exists():
+        console.print(f"[red]Error:[/red] Path {resolved} does not exist")
+        raise typer.Exit(1)
+
+    console.print(f"[dim]Analyzing {resolved}...[/dim]")
+    analyzer = ProjectAnalyzer(resolved)
+    graph = analyzer.analyze()
+    stats = graph.get_stats()
+
+    if mermaid:
+        console.print(graph.to_mermaid())
+        return
+
+    console.print(f"\n[bold]Dependency Analysis[/bold]\n")
+    console.print(f"  Modules:          {stats.total_modules}")
+    console.print(f"  Total imports:    {stats.total_imports}")
+    console.print(f"  Internal:         {stats.internal_imports}")
+    console.print(f"  External:         {stats.external_imports}")
+    console.print(f"  Circular deps:    [{'red' if stats.cycles else 'green'}]{len(stats.cycles)}[/]")
+
+    if stats.most_imported:
+        console.print(f"\n[bold]Most Imported[/bold]")
+        for module, count in stats.most_imported[:5]:
+            console.print(f"  {count:3}x  {module}")
+
+    if stats.most_dependencies:
+        console.print(f"\n[bold]Most Dependencies[/bold]")
+        for module, count in stats.most_dependencies[:5]:
+            console.print(f"  {count:3}   {module}")
+
+
+@app.command(help="Detect circular dependencies")
+def cycles(
+    path: Annotated[Path, typer.Argument(help="Path to codebase")] = Path("."),
+) -> None:
+    from codemapper.processor.graph import ProjectAnalyzer
+
+    resolved = path.resolve()
+    if not resolved.exists():
+        console.print(f"[red]Error:[/red] Path {resolved} does not exist")
+        raise typer.Exit(1)
+
+    console.print(f"[dim]Analyzing {resolved}...[/dim]")
+    analyzer = ProjectAnalyzer(resolved)
+    graph = analyzer.analyze()
+    found_cycles = graph.find_cycles()
+
+    if not found_cycles:
+        console.print("[green]✓[/green] No circular dependencies found")
+        return
+
+    console.print(f"[red]✗[/red] Found {len(found_cycles)} circular dependencies:\n")
+    for i, cycle in enumerate(found_cycles, 1):
+        console.print(f"  {i}. [yellow]{cycle}[/yellow]")
+
+
 @app.command(name="help", help="Show detailed help")
 def show_help() -> None:
     console.print(Panel(HELP_TEXT, title="CodeMapper Help", border_style="blue"))
@@ -316,3 +382,4 @@ def show_help() -> None:
 
 if __name__ == "__main__":
     app()
+

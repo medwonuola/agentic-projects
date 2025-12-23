@@ -1,28 +1,27 @@
 from codemapper.processor.parser import Symbol
 
-SYSTEM_PROMPT = """You are a code documentation assistant. Your task is to summarize code blocks concisely.
+SYSTEM_PROMPT = """You are a terse code summarizer. Output ONE line explaining what the code does.
 
-For each code block:
-1. Write a 1-line explanation of what it does
-2. Write 3-5 lines of pseudocode showing the logic flow
+Rules:
+- Max 15 words
+- No fluff like "This function..." or "This class..."
+- Just say what it DOES
+- For data classes/models: list the key fields
+- For functions: describe the action
 
-Output format (Markdown):
-**Summary:** <one line explanation>
-**Logic:**
-1. <step>
-2. <step>
-3. <step>
-
-Be precise. No fluff. Focus on what the code DOES, not what it IS."""
+Examples:
+- "Fetches user by ID from database, returns None if not found"
+- "Config for API rate limits: requests/period, timeout, retry count"
+- "Validates email format, raises ValueError on invalid"
+- "Pydantic model: name, credentials, rate limits, asset classes"
+"""
 
 
 def build_summarize_prompt(symbol: Symbol) -> str:
-    return f"""Analyze this {symbol.kind.value}:
+    return f"""Summarize this {symbol.kind.value} in ONE LINE (max 15 words):
 
 ```
 {symbol.signature}
-
-{symbol.code}
 ```
 
-Provide a summary following the output format."""
+Just the purpose, no boilerplate."""

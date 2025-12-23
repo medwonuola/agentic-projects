@@ -1,4 +1,4 @@
-.PHONY: infra-up infra-down pull-model dev install clean
+.PHONY: infra-up infra-down pull-model dev install clean venv
 
 OLLAMA_CONTAINER := codemapper-ollama
 OLLAMA_PORT := 11434
@@ -25,6 +25,9 @@ infra-down:
 pull-model:
 	@docker exec $(OLLAMA_CONTAINER) ollama pull $(MODEL)
 	@echo "Model $(MODEL) ready"
+
+venv:
+	@echo "source .venv/bin/activate"
 
 install:
 	pip install -e .
