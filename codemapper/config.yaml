@@ -1,0 +1,21 @@
+model:
+  name: "qwen2.5-coder:14b"
+  context_window: 8192
+  temperature: 0.1
+
+exclude_patterns:
+  - "*.min.js"
+  - "*.bundle.js"
+  - "*.lock"
+  - "package-lock.json"
+  - "*.map"
+
+extensions:
+  python: [".py", ".pyi"]
+  javascript: [".js", ".jsx", ".mjs"]
+  typescript: [".ts", ".tsx"]
+  rust: [".rs"]
+  go: [".go"]
+
+output_dir: "maps"
+lock_file: "mapper.lock"
